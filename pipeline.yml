@@ -1,0 +1,205 @@
+---
+resources:
+- name: grid
+  type: git
+  source:
+    uri: https://github.com/matthewmcnew/concoursetest.git
+
+- name: api
+  type: git
+  source:
+    uri: https://github.com/matthewmcnew/concoursetest2.git
+
+jobs:
+- name: api-unit
+  plan:
+  - get: api
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          ls
+
+
+- name: grid-unit
+  plan:
+  - get: grid
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          ls
+
+- name: api-deploy
+  serial_groups: [dev]
+  plan:
+  - get: api
+    passed: [api-unit]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
+
+- name: grid-deploy
+  serial_groups: [dev]
+  plan:
+  - get: grid
+    passed: [grid-unit]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
+
+- name: smoke-test-dev
+  serial_groups: [dev]
+  plan:
+  - get: grid
+    passed: [grid-deploy]
+    trigger: true
+  - get: api
+    passed: [api-deploy]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
+
+
+- name: api-acceptance-deploy
+  serial_groups: [acceptance]
+  plan:
+  - get: api
+    passed: [smoke-test-dev]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
+
+- name: grid-acceptance-deploy
+  serial_groups: [acceptance]
+  plan:
+  - get: grid
+    passed: [smoke-test-dev]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
+
+- name: promote to staging
+  plan:
+  - get: api
+    passed: [api-acceptance-deploy]
+  - get: grid
+    passed: [grid-acceptance-deploy]
+
+- name: api-staging-deploy
+  plan:
+  - get: api
+    passed: [promote to staging]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
+
+- name: grid-staging-deploy
+  plan:
+  - get: grid
+    passed: [promote to staging]
+    trigger: true
+  - task: create-some-files
+    config:
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: ubuntu
+      run:
+        path: sh
+        args:
+        - -exc
+        - |
+          sleep 10
+          ls
